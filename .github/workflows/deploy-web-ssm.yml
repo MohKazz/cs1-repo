@@ -1,16 +1,17 @@
 name: Deploy Web via SSM
 on:
-  workflow_dispatch: {}  # run manually
+  workflow_dispatch: {}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
       AWS_REGION: eu-central-1
+      AWS_PAGER: ""
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS creds
+      - name: Configure AWS creds (temp tokens supported)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -18,13 +19,83 @@ jobs:
           aws-session-token:     ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region:            ${{ env.AWS_REGION }}
 
-      - name: Push simple page to all web instances
+      - name: Resolve running instance IDs by tag
+        id: ids
+        run: |
+          set -e
+          IDS=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=cs1nca-dev-web" "Name=instance-state-name,Values=running" \
+            --query "Reservations[].Instances[].InstanceId" --output text)
+          echo "Found: $IDS"
+          if [ -z "$IDS" ]; then
+            echo "No running instances with Name=cs1nca-dev-web"; exit 1
+          fi
+          echo "IDS=$IDS" >> $GITHUB_OUTPUT
+
+      - name: Build SSM parameters (JSON)
+        run: |
+          DATE="$(date -u)"
+          cat > params.json <<'EOF'
+          {
+            "commands": [
+              "set -euo pipefail",
+              "sudo mkdir -p /usr/share/nginx/html || true",
+              "echo \"Deployed ${GITHUB_SHA} at ${DATE}\" | sudo tee /tmp/deploy.txt >/dev/null",
+              "if [ -d /usr/share/nginx/html ]; then sudo cp /tmp/deploy.txt /usr/share/nginx/html/index.html && sudo systemctl restart nginx || true; fi"
+            ]
+          }
+          EOF
+          sed -i "s/\${GITHUB_SHA}/${GITHUB_SHA}/g" params.json
+          sed -i "s/\${DATE}/$DATE/g" params.json
+          echo "Params:"; cat params.json
+
+      - name: Send SSM command
+        id: send
         run: |
           CMD_ID=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \
-            --targets "Key=tag:Name,Values=cs1nca-dev-web" \
-            --comment "Update nginx index via GitHub Actions" \
-            --parameters commands="sudo bash -lc 'echo \"<h1>Deployed $GITHUB_SHA on $(date -u) via SSM</h1>\" > /usr/share/nginx/html/index.html'" \
+            --instance-ids ${{ steps.ids.outputs.IDS }} \
+            --parameters file://params.json \
+            --comment "Deploy simple page via GitHub Actions" \
             --query "Command.CommandId" --output text)
+          echo "CMD_ID=$CMD_ID" >> $GITHUB_OUTPUT
+          echo "CommandId: $CMD_ID"
 
-          echo "Command: $CMD_ID"
+      - name: Wait for SSM completion
+        run: |
+          set -e
+          for ID in ${{ steps.ids.outputs.IDS }}; do
+            echo "Waiting on $ID ..."
+            for i in $(seq 1 30); do
+              STATUS=$(aws ssm get-command-invocation \
+                --command-id "${{ steps.send.outputs.CMD_ID }}" \
+                --instance-id "$ID" \
+                --query 'Status' --output text 2>/dev/null || true)
+              echo "$ID status: $STATUS"
+              if [ "$STATUS" = "Success" ]; then break; fi
+              if [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ] || [ "$STATUS" = "TimedOut" ]; then
+                exit 1
+              fi
+              sleep 5
+            done
+          done
+
+      - name: Dump SSM output on failure
+        if: failure()
+        run: |
+          echo "CommandId: ${{ steps.send.outputs.CMD_ID }}"
+          for ID in ${{ steps.ids.outputs.IDS }}; do
+            echo "---- $ID ----"
+            aws ssm get-command-invocation \
+              --command-id "${{ steps.send.outputs.CMD_ID }}" \
+              --instance-id "$ID" \
+              --query '{Status:Status,Code:ResponseCode,StdErr:StandardErrorContent,StdOut:StandardOutputContent}' \
+              --output json || true
+          done
+
+      - name: Print instance public IPs
+        run: |
+          aws ec2 describe-instances \
+            --instance-ids ${{ steps.ids.outputs.IDS }} \
+            --query "Reservations[].Instances[].PublicIpAddress" \
+            --output text
