@@ -17,3 +17,10 @@ override.tf.json
 # Ignore provider plugins, caches, etc. (covered by .terraform/)
 # Keep the dependency lock file:
 # !.terraform.lock.hcl
+
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.*
+*.tfvars
+terraform.tfvars
+keys and vars/
