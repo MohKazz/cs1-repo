@@ -1,0 +1,30 @@
+name: Deploy Web via SSM
+on:
+  workflow_dispatch: {}  # run manually
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: eu-central-1
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS creds
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token:     ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - name: Push simple page to all web instances
+        run: |
+          CMD_ID=$(aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --targets "Key=tag:Name,Values=cs1nca-dev-web" \
+            --comment "Update nginx index via GitHub Actions" \
+            --parameters commands="sudo bash -lc 'echo \"<h1>Deployed $GITHUB_SHA on $(date -u) via SSM</h1>\" > /usr/share/nginx/html/index.html'" \
+            --query "Command.CommandId" --output text)
+
+          echo "Command: $CMD_ID"
