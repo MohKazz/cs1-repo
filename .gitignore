@@ -24,3 +24,9 @@ override.tf.json
 *.tfvars
 terraform.tfvars
 keys and vars/
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.*
+*.tfvars
+terraform.tfvars
+keys and vars/
