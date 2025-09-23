@@ -1,0 +1,20 @@
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  ~ update in-place
+
+Terraform will perform the following actions:
+
+  # aws_launch_template.web will be updated in-place
+  ~ resource "aws_launch_template" "web" {
+        id                                   = "lt-07b0b657fca066f03"
+      ~ latest_version                       = 2 -> (known after apply)
+        name                                 = "cs1nca-dev-lt-20250918172941020700000003"
+        tags                                 = {}
+      ~ user_data                            = "IyEvYmluL2Jhc2gNCnl1bSBpbnN0YWxsIC15IG5naW54DQpzeXN0ZW1jdGwgZW5hYmxlIG5naW54DQpzeXN0ZW1jdGwgc3RhcnQgbmdpbngNCmVjaG8gIjxoMT5IZWxsbyBmcm9tIFwkKGhvc3RuYW1lKTwvaDE+IiA+IC91c3Ivc2hhcmUvbmdpbngvaHRtbC9pbmRleC5odG1sDQo=" -> "IyEvYmluL2Jhc2gNCnNldCAtZXV4byBwaXBlZmFpbA0KDQojIERldGVjdCBPUyBmYW1pbHkgKEFMMiB2cyBBTDIwMjMpIGFuZCBpbnN0YWxsIG5naW54IHByb3Blcmx5DQppZiBncmVwIC1xaSAiQW1hem9uIExpbnV4IDIiIC9ldGMvc3lzdGVtLXJlbGVhc2UgMj4vZGV2L251bGw7IHRoZW4NCiAgIyBBbWF6b24gTGludXggMg0KICB5dW0gY2xlYW4gYWxsIC15DQogIGFtYXpvbi1saW51eC1leHRyYXMgZW5hYmxlIG5naW54MQ0KICB5dW0gaW5zdGFsbCAteSBuZ2lueA0KZWxpZiBncmVwIC1xaSAiQW1hem9uIExpbnV4IiAvZXRjL29zLXJlbGVhc2UgMj4vZGV2L251bGwgJiYgY29tbWFuZCAtdiBkbmYgPi9kZXYvbnVsbCAyPiYxOyB0aGVuDQogICMgQW1hem9uIExpbnV4IDIwMjMNCiAgZG5mIGNsZWFuIGFsbCAteSB8fCB0cnVlDQogIGRuZiBpbnN0YWxsIC15IG5naW54DQplbHNlDQogICMgRmFsbGJhY2sgZm9yIG90aGVyIFJQTS1iYXNlZCBpbWFnZXMNCiAgeXVtIGluc3RhbGwgLXkgbmdpbnggfHwgZG5mIGluc3RhbGwgLXkgbmdpbnggfHwgdHJ1ZQ0KZmkNCg0KIyBNaW5pbWFsIGluZGV4IHBhZ2UNCm1rZGlyIC1wIC91c3Ivc2hhcmUvbmdpbngvaHRtbA0KZWNobyAiPGgxPkhlbGxvIGZyb20gJChob3N0bmFtZSAtZik8L2gxPiIgPiAvdXNyL3NoYXJlL25naW54L2h0bWwvaW5kZXguaHRtbA0KDQojIFN0YXJ0ICYgZW5hYmxlDQpzeXN0ZW1jdGwgZW5hYmxlIG5naW54DQpzeXN0ZW1jdGwgcmVzdGFydCBuZ2lueA0KDQojIElmIGZpcmV3YWxsZCBpcyBydW5uaW5nLCBhbGxvdyBIVFRQIChyYXJlIG9uIEFMMi9BTDIwMjMpDQppZiBzeXN0ZW1jdGwgaXMtYWN0aXZlIC0tcXVpZXQgZmlyZXdhbGxkOyB0aGVuDQogIGZpcmV3YWxsLWNtZCAtLWFkZC1zZXJ2aWNlPWh0dHAgLS1wZXJtYW5lbnQgfHwgdHJ1ZQ0KICBmaXJld2FsbC1jbWQgLS1yZWxvYWQgfHwgdHJ1ZQ0KZmkNCg=="
+        # (16 unchanged attributes hidden)
+
+        # (3 unchanged blocks hidden)
+    }
+
+Plan: 0 to add, 1 to change, 0 to destroy.
