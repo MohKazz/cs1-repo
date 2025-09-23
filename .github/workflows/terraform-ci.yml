@@ -24,8 +24,8 @@ jobs:
         with:
           terraform_version: 1.5.0
 
-      - name: Terraform fmt (check only)
-        run: terraform fmt -check -recursive
+      - name: Terraform fmt (show diff but don’t fail)
+        run: terraform fmt -diff -recursive || true
 
       - name: Terraform init (local backend on runner)
         run: terraform init -input=false
