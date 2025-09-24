@@ -32,22 +32,28 @@ jobs:
           fi
           echo "IDS=$IDS" >> $GITHUB_OUTPUT
       
-      - name: Build SSM parameters (JSON)
-        id: build_params
+      - name: Build SSM parameters (install node_exporter)
         run: |
-          DATE="$(date -u)"
+          # no comments inside JSON! build a clean commands array
           cat > params.json <<'EOF'
           {
             "commands": [
-              "set -euo pipefail",
-              "sudo mkdir -p /usr/share/nginx/html || true",
-              "echo \"Deployed ${GITHUB_SHA} at ${DATE}\" | sudo tee /tmp/deploy.txt >/dev/null"
+              "set -euxo pipefail",
+              "VER=1.8.2",
+              "cd /tmp",
+              "curl -L -o ne.tar.gz https://github.com/prometheus/node_exporter/releases/download/v${VER}/node_exporter-${VER}.linux-amd64.tar.gz",
+              "tar xf ne.tar.gz",
+              "sudo mv node_exporter-${VER}.linux-amd64/node_exporter /usr/local/bin/",
+              "sudo id nodeexp 2>/dev/null || sudo useradd -rs /bin/false nodeexp",
+              "sudo bash -lc 'cat >/etc/systemd/system/node_exporter.service <<UNIT\n[Unit]\nDescription=Prometheus Node Exporter\nAfter=network.target\n\n[Service]\nUser=nodeexp\nExecStart=/usr/local/bin/node_exporter --web.listen-address=:9100\n\n[Install]\nWantedBy=multi-user.target\nUNIT'",
+              "sudo systemctl daemon-reload",
+              "sudo systemctl enable --now node_exporter",
+              "curl -sI http://127.0.0.1:9100/metrics | head -n1 || true"
             ]
           }
           EOF
-          sed -i "s/\${GITHUB_SHA}/${GITHUB_SHA}/g" params.json
-          sed -i "s/\${DATE}/$DATE/g" params.json
           echo "Params:"; cat params.json
+
 
 
       - name: Send SSM command (update index.html)
