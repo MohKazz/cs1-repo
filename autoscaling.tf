@@ -1,7 +1,7 @@
 resource "aws_autoscaling_group" "web" {
   name                      = "${var.name}-asg"
-  desired_capacity          = 0
-  min_size                  = 0
+  desired_capacity          = 2
+  min_size                  = 2
   max_size                  = 4
   vpc_zone_identifier       = [for s in aws_subnet.public : s.id]
   health_check_type         = "EC2"
