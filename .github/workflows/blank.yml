@@ -1,0 +1,73 @@
+# .github/workflows/terraform-destroy.yml
+name: Terraform Destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type DESTROY to confirm"
+        required: true
+      workspace:
+        description: "Terraform workspace (optional)"
+        required: false
+        default: ""
+
+jobs:
+  destroy:
+    # Safety guard: only run if user typed DESTROY
+    if: ${{ github.event.inputs.confirm == 'DESTROY' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure/envs/dev
+    env:
+      AWS_REGION: eu-central-1
+      AWS_PAGER: ""
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (supports temp tokens)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token:     ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+
+      - name: Terraform init (uses your S3 + DynamoDB backend)
+        run: terraform init -input=false
+
+      - name: Select workspace (optional)
+        if: ${{ github.event.inputs.workspace != '' }}
+        run: terraform workspace select "${{ github.event.inputs.workspace }}"
+
+      # Optional: backup current remote state to an archive key before destroy.
+      # Set these repo secrets if you want this:
+      #   TF_STATE_BUCKET = your S3 bucket name (e.g. cs1nca-tfstate-...-eu-central-1)
+      #   TF_STATE_KEY    = exact key used by backend (e.g. cs1/dev/terraform.tfstate)
+      - name: Backup remote tfstate (optional)
+        if: ${{ secrets.TF_STATE_BUCKET != '' && secrets.TF_STATE_KEY != '' }}
+        run: |
+          TS=$(date -u +'%Y%m%dT%H%M%SZ')
+          SRC="s3://${{ secrets.TF_STATE_BUCKET }}/${{ secrets.TF_STATE_KEY }}"
+          DST="s3://${{ secrets.TF_STATE_BUCKET }}/archives/${{ secrets.TF_STATE_KEY }}.${TS}.bak"
+          echo "Backing up state: $SRC -> $DST"
+          aws s3 cp "$SRC" "$DST" || echo "State copy skipped (object may not exist yet)."
+
+      - name: Terraform destroy (no prompts)
+        run: terraform destroy -auto-approve
+
+  refused:
+    # If user didn’t type DESTROY, show a friendly message
+    if: ${{ github.event.inputs.confirm != 'DESTROY' }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "Refusing to run destroy. Re-run the workflow and type DESTROY to confirm."
+          exit 1
